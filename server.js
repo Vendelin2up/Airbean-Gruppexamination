@@ -19,11 +19,28 @@ app.use(express.json());
 // app.use(bodyParser.json());
 // app.use("/menu", router);
 app.get("/menu", (req, res) => {
-  const coffeMenu = menu.res.json(menu);
-  console.log(menu);
+  const coffeMenu = menu.map((item) => {
+    return {
+      title: item.title,
+      price: item.price,
+    };
+  });
+  res.json(coffeMenu);
+});
+
+// En about route
+app.get("/about", (req, res) => {
+  const aboutInfo = {
+    company: "Airbean Coffee",
+    description:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    coffeeProduction:
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+  };
+  res.json(aboutInfo);
 });
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-//ANN testar 
+//ANN testar
