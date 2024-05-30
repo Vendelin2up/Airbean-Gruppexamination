@@ -19,7 +19,7 @@ app.use(express.json());
 // app.use(bodyParser.json());
 // app.use("/menu", router);
 app.get("/menu", (req, res) => {
-  res.json(menu);
+  const coffeMenu = menu.res.json(menu);
   console.log(menu);
 });
 
