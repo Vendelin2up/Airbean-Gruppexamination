@@ -19,11 +19,16 @@ app.use(express.json());
 // app.use(bodyParser.json());
 // app.use("/menu", router);
 app.get("/menu", (req, res) => {
-  const coffeMenu = menu.res.json(menu);
-  console.log(menu);
+  const coffeMenu = menu.map((item) => {
+    return {
+      title: item.title,
+      price: item.price,
+    };
+  });
+  res.json(coffeMenu);
 });
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-//ANN testar 
+//ANN testar
