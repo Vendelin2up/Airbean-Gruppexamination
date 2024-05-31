@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple frontend for Airbean</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="header">
+    <h1>Simple frontend for Airbean</h1>
+    <img src="img/coffee-beans.svg" alt="Coffee beans" class="coffeebeans">
+    </div>
+    <p class="demonstration">(For demonstrational purposes only)</p>
+    <nav id="navbar">
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Menu</a></li>
+            <li><a href="#">Orders</a></li>
+        </ul>
+    </nav>
+    <h2>Order</h2>
+
+    <form action="/api/orders" method="POST">
+        <label for="product">Product</label>
+        <select name="product" id="product">
+            <option value="bryggkaffe">Bryggkaffe</option>
+            <option value="caffedoppio">Caffè Doppio</option>
+            <option value="cappuccino">Cappuccino</option>
+            <option value="lattemacchiato">Latte Macchiato</option>
+            <option value="kaffelatte">Kaffe Latte</option>
+            <option value="cortado">Cortado</option>
+        </select>
+        <br>
+        <br>
+        <button type="submit">Add to order</button>
+    </form>
+
+    <!-- <ul id="orders"></ul> -->
+
+    <script>
+        const ordersElement = document.getElementById('orders');
+
+        fetch('http://localhost:8080/api/orders')
+            .then(response => response.json())
+            .then(orders => {
+                orders.forEach(order => {
+                    const orderElement = document.createElement('li');
+                    orderElement.textContent = `${order.product} (${order.size}) - ${order.email}`;
+                    ordersElement.appendChild(orderElement);
+                });
+            });
+    </script>
+</body>
+</html>
