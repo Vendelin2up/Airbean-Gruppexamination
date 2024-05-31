@@ -65,3 +65,7 @@ a {
     font-weight: 500;
     transition: 0.3s;
 }
+
+#about {
+    width: 70%;
+}

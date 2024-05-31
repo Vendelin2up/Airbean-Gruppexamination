@@ -3,8 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend for Airbean</title>
+    <title>Simple frontend for Airbean</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          fetch('/about')
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('company').innerText = data.company;
+              document.getElementById('description').innerText = data.description;
+              document.getElementById('coffeeProduction').innerText = data.coffeeProduction;
+            })
+            .catch(error => console.error('Error fetching data:', error));
+        });
+      </script>
 </head>
 <body>
 <div class="header">
@@ -22,5 +34,10 @@
         <li><a href="about.html">About us</a></li>
         </ul>
     </nav>
+    <div id="about">
+        <h1 id="company"></h1>
+        <p id="description"></p>
+        <p id="coffeeProduction"></p>
+      </div>
 </body>
 </html>

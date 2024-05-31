@@ -53,6 +53,10 @@ app.get("/about", (req, res) => {
       "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
   };
   res.json(aboutInfo);
+  
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/about.html'));
+  });
 });
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '/public/index.html'));
