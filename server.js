@@ -6,14 +6,22 @@
 //npm install 
 import express from "express";
 import menu from "./models/coffeeMenu.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+// import bodyParser from "body-parser";
+// import router from "./routes/airbean.js";
 import bodyParser from "body-parser"; //Utkommenterat av Ann
 import router from "./routes/airbean.js"; //Utkommenterat av Ann
 
 const app = express();
 const PORT = 8080;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 //Middlewares
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true })); //Tillagt av Ann
 app.use(bodyParser.json()); //Tillagt av Ann
 
@@ -46,7 +54,9 @@ app.get("/about", (req, res) => {
   };
   res.json(aboutInfo);
 });
-
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '/public/index.html'));
+});
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
