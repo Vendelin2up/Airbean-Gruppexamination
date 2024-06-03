@@ -1,28 +1,29 @@
-import express, { Router } from 'express'
-import nedb from 'nedb-promise'
-import { fileURLToPath } from 'url';
-import path, { dirname } from 'path';
+import express, { Router } from "express";
+import nedb from "nedb-promise";
+import { fileURLToPath } from "url";
+import path, { dirname } from "path";
 import bodyParser from "body-parser";
 
 import menu from "../models/coffeeMenu.js";
 import { createUser, getUserById } from "../models/user.js";
 import { validateUserCreation } from "../middlewares/validation.js";
+import { validateMenu, validateAboutData } from "../middlewares/validation.js";
 
 const router = Router();
-const cart = new nedb({filename: 'models/cart.db', autoload: true})
+const cart = new nedb({ filename: "models/cart.db", autoload: true });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 router.use(bodyParser.urlencoded({ extended: true }));
-router.use(bodyParser.json()); 
+router.use(bodyParser.json());
 
 // Homepage
-router.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+router.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 // About
-router.get("/about", (req, res) => {
+router.get("/about", validateAboutData, (req, res) => {
   const aboutInfo = {
     company: "Airbean Coffee",
     description:
@@ -34,45 +35,50 @@ router.get("/about", (req, res) => {
 });
 
 // Menu
-router.get("/menu", (req, res) => {
-  const coffeMenu = menu.map((item) => {
+router.get("/menu", validateMenu, (req, res) => {
+  const coffeeMenu = menu.map((item) => {
     return {
       title: item.title,
       price: item.price,
+      id: item.id,
     };
   });
-  res.json(coffeMenu);
+  res.json(coffeeMenu);
 });
 
 // Menu - order
-router.post('/menu', async(req, res) => {
+router.post("/menu", async (req, res) => {
   try {
     const orderId = req.body.id;
     console.log(orderId);
-    const selectedProduct = menu.find((product) => product.id === orderId)
+    const selectedProduct = menu.find((product) => product.id === orderId);
 
-    if(!selectedProduct){
-      res.status(404).send('The requested product could not be found')
-    } 
-      
-    await cart.insert(selectedProduct)
-    const productTitle = selectedProduct.title
-    const productPrice = selectedProduct.price
-    res.send(`${productTitle} was successfully added to cart`)
+    if (!selectedProduct) {
+      res.status(404).send("The requested product could not be found");
+    }
+
+    await cart.insert(selectedProduct);
+    const productTitle = selectedProduct.title;
+    const productPrice = selectedProduct.price;
+    res.send(
+      `${productTitle} costing ${productPrice} kr was successfully added to cart`
+    );
   } catch (error) {
     console.log(error);
-    res.status(500).send('Internal Server Error')
+    res.status(500).send("Internal Server Error");
   }
-})
+});
 
 // Skapar användaren och returnerar användar-ID
-router.post("/users", validateUserCreation, (req, res) => {
-  const { username } = req.body;
-  createUser(username, (err, user) => {// Skapar användaren
-    if (err) { // Om det uppstår ett fel
-      return res.status(500).json({ error: "Failed to create user" });// Skicka ett felmeddelande
+router.post("/register", validateUserCreation, (req, res) => {
+  const { username, password } = req.body;
+  createUser(username, password, (err, user) => {
+    // Skapar användaren
+    if (err) {
+      // Om det uppstår ett fel
+      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande, false
     }
-    res.status(201).json({ userId: user.userId });// Skicka användar-ID om inget fel uppstår
+    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår, true
   });
 });
 //Middleware-funktionen validateUserCreation används för att validera inkommande data innan användaren skapas.
@@ -80,7 +86,7 @@ router.post("/users", validateUserCreation, (req, res) => {
 //Annars returnerar den ett felmeddelande.
 
 //Hämtar användaren med det specificerade användar-ID:t
-router.get ("/users/:userId", (req, res) => {
+router.get("/users/:userId", (req, res) => {
   const { userId } = req.params;
   getUserById(userId, (err, user) => {
     if (err || !user) {
@@ -88,7 +94,7 @@ router.get ("/users/:userId", (req, res) => {
     }
     res.json(user);
   });
-})
+});
 
 // // Hämtar användarens beställningar baserat på det specificerade användar-ID:t
 router.get("/users/:userId/orders", (req, res) => {
@@ -101,6 +107,3 @@ router.get("/users/:userId/orders", (req, res) => {
   });
 });
 export default router;
-
-
-
