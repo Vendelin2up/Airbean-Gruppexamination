@@ -69,6 +69,28 @@ router.post("/menu", async (req, res) => {
   }
 });
 
+// Cart/Varukorg - användaren får en överblick över vad som beställts
+router.get("/cart", async (req, res) => {
+  try {
+    //hämta cart och visa för användaren
+    const cartItems = await cart.find( (err, docs) => { 
+      return docs
+    })
+    
+    //kontroll om cart är tom, i så fall får man ett felmeddelande
+    if (cartItems.length === 0) {
+      res.status(404).send("Cart is empty");
+    }
+    //skickar cart till användaren
+    res.send(cartItems);
+    return cartItems
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 // Skapar användaren och returnerar användar-ID
 router.post("/register", validateUserCreation, (req, res) => {
   const { username, password } = req.body;
