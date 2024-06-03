@@ -9,18 +9,14 @@
 }
 body {
     background: linear-gradient(90deg, #2757af, #5616bd);
-    /* background-image: url( '/public/img/triangles-big.svg' ); */
     color: white;
     display: flex;
     flex-direction: column;
-    /* justify-content: center; */
     align-items: center;
-    /* padding: 20px; */
     margin-left: auto;
     margin-right: auto;
     width: 80%;
     height: 100vh;
-    /* border: 2px solid white; */
     border-radius: 10px;
     box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.5);
 }
@@ -69,3 +65,54 @@ a {
 #about {
     width: 70%;
 }
+.menu-item {
+    margin-bottom: 20px;
+  }
+  .menu-item h2 {
+    margin: 0;
+  }
+  .menu-item p {
+    margin: 5px 0;
+  }
+  .menu-item span {
+    font-weight: bold;
+  }
+  form {
+    max-width: 300px;
+    /* margin: auto; */
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+  button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+  }
+  .message {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .order {
+    border: 2px solid #c072d8;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+  }
+  .order h2 {
+    margin: 0;
+  }
+  .order p {
+    margin: 5px 0;
+  }
+  .order span {
+    font-weight: bold;
+  }

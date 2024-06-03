@@ -17,10 +17,40 @@
         <li><a href="login.html">Login</a></li>
         <li><a href="register.html">Register</a></li>
         <li><a href="menu.html">Coffee Menu</a></li>
-        <li><a href="currentorder.html">View Current Order</a></li>
+        <li><a href="currentorder.html">View Cart</a></li>
         <li><a href="orderhistory.html">View Order History</a></li>
         <li><a href="about.html">About us</a></li>
         </ul>
     </nav>
+    <h1>Menu</h1>
+  <div id="menu-container"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/menu')
+        .then(response => response.json())
+        .then(menu => {
+          const menuContainer = document.getElementById('menu-container');
+          menu.forEach(item => {
+            const menuItem = document.createElement('div');
+            menuItem.className = 'menu-item';
+            
+            const title = document.createElement('h2');
+            title.textContent = item.title;
+            menuItem.appendChild(title);
+            
+            const desc = document.createElement('p');
+            desc.textContent = item.desc;
+            menuItem.appendChild(desc);
+            
+            const price = document.createElement('p');
+            price.innerHTML = `<span>Price: </span>${item.price} SEK`;
+            menuItem.appendChild(price);
+            
+            menuContainer.appendChild(menuItem);
+          });
+        });
+    });
+  </script>
 </body>
 </html>

@@ -23,7 +23,7 @@ router.get("/", (req, res) => {
 });
 
 // About
-router.get("/about", validateAboutData, (req, res) => {
+router.get("/about", (req, res) => {  // Jag tog bort "validateAboutData" från raden här för att det inte behövdes. I en GET-förfrågan behöver man inte validera någon BODY data eftersom det inte finns någon.
   const aboutInfo = {
     company: "Airbean Coffee",
     description:

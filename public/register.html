@@ -17,10 +17,52 @@
         <li><a href="login.html">Login</a></li>
         <li><a href="register.html">Register</a></li>
         <li><a href="menu.html">Coffee Menu</a></li>
-        <li><a href="currentorder.html">View Current Order</a></li>
+        <li><a href="currentorder.html">View Cart</a></li>
         <li><a href="orderhistory.html">View Order History</a></li>
         <li><a href="about.html">About us</a></li>
         </ul>
     </nav>
+    <h1>Register</h1>
+  <form id="register-form">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required>
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+    <button type="submit">Register</button>
+  </form>
+  <div class="message" id="message"></div>
+
+  <script>
+    document.getElementById('register-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      fetch('/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messageDiv = document.getElementById('message');
+        if (data.error) {
+          messageDiv.textContent = `Error: ${data.error}`;
+          messageDiv.style.color = 'red';
+        } else {
+          messageDiv.textContent = `User successfully created with ID: ${data.userId}`;
+          messageDiv.style.color = 'green';
+        }
+      })
+      .catch(error => {
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = `Error: ${error}`;
+        messageDiv.style.color = 'red';
+      });
+    });
+  </script>
 </body>
 </html>
