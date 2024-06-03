@@ -1,14 +1,69 @@
-import { Router } from "express";
+import express, { Router } from 'express'
+import nedb from 'nedb-promise'
+import { fileURLToPath } from 'url';
+import path, { dirname } from 'path';
+import bodyParser from "body-parser";
+
 import menu from "../models/coffeeMenu.js";
 import { createUser, getUserById } from "../models/user.js";
 import { validateUserCreation } from "../middlewares/validation.js";
 
 const router = Router();
+const cart = new nedb({filename: 'models/cart.db', autoload: true})
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Get menu
-router.get("/menu", (req, res) => {
-  res.json(menu);
+router.use(bodyParser.urlencoded({ extended: true }));
+router.use(bodyParser.json()); 
+
+// Homepage
+router.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
+// About
+router.get("/about", (req, res) => {
+  const aboutInfo = {
+    company: "Airbean Coffee",
+    description:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    coffeeProduction:
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+  };
+  res.json(aboutInfo);
+});
+
+// Menu
+router.get("/menu", (req, res) => {
+  const coffeMenu = menu.map((item) => {
+    return {
+      title: item.title,
+      price: item.price,
+    };
+  });
+  res.json(coffeMenu);
+});
+
+// Menu - order
+router.post('/menu', async(req, res) => {
+  try {
+    const orderId = req.body.id;
+    console.log(orderId);
+    const selectedProduct = menu.find((product) => product.id === orderId)
+
+    if(!selectedProduct){
+      res.status(404).send('The requested product could not be found')
+    } 
+      
+    await cart.insert(selectedProduct)
+    const productTitle = selectedProduct.title
+    const productPrice = selectedProduct.price
+    res.send(`${productTitle} was successfully added to cart`)
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error')
+  }
+})
 
 // Skapar användaren och returnerar användar-ID
 router.post("/users", validateUserCreation, (req, res) => {
