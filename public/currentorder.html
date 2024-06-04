@@ -17,10 +17,53 @@
         <li><a href="login.html">Login</a></li>
         <li><a href="register.html">Register</a></li>
         <li><a href="menu.html">Coffee Menu</a></li>
-        <li><a href="currentorder.html">View Current Order</a></li>
+        <li><a href="currentorder.html">View Cart</a></li>
         <li><a href="orderhistory.html">View Order History</a></li>
         <li><a href="about.html">About us</a></li>
         </ul>
     </nav>
+    <h1>Cart Order</h1>
+  <div id="orders-container"></div>
+  <div class="total" id="order-total"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/cart')
+        .then(response => response.json())
+        .then(orders => {
+          const ordersContainer = document.getElementById('orders-container');
+          let total = 0;
+
+          orders.forEach(order => {
+            const orderDiv = document.createElement('div');
+            orderDiv.className = 'order';
+            
+            const title = document.createElement('h2');
+            title.textContent = order.title;
+            orderDiv.appendChild(title);
+            
+            const desc = document.createElement('p');
+            desc.textContent = order.desc;
+            orderDiv.appendChild(desc);
+            
+            const price = document.createElement('p');
+            price.innerHTML = `<span>Price: </span>${order.price} SEK`;
+            orderDiv.appendChild(price);
+            
+            ordersContainer.appendChild(orderDiv);
+
+            // Add to the total price
+            total += order.price;
+          });
+
+          // Display the total price
+          const totalDiv = document.getElementById('order-total');
+          totalDiv.textContent = `Total: ${total} SEK`;
+        })
+        .catch(error => {
+          console.error('Error fetching cart orders:', error);
+        });
+    });
+  </script>
 </body>
 </html>
