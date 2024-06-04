@@ -3,11 +3,13 @@ import nedb from "nedb-promise";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import bodyParser from "body-parser";
+import session from "express-session"; // för att hantera användarsessioner - login status
 
 import menu from "../models/coffeeMenu.js";
-import { createUser, getUserById } from "../models/user.js";
+import { createUser, getUserById, validateUser } from "../models/user.js";
 import { validateUserCreation } from "../middlewares/validation.js";
 import { validateMenu, validateAboutData } from "../middlewares/validation.js";
+import requireLogin from "../middlewares/requireLogin.js"; //Login middleware för att kolla status, återanvänd vid behov
 
 const router = Router();
 const cart = new nedb({ filename: "models/cart.db", autoload: true });
@@ -16,6 +18,23 @@ const __dirname = dirname(__filename);
 
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
+
+// Session configuration - behövs för login funktionen
+router.use(session({
+  secret: 'this is the key', 
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
+
+
+// Middleware to make session variables accessible
+router.use((req, res, next) => {
+  if (typeof req.session.isOnline === 'undefined') {
+    req.session.isOnline = false;
+  }
+  next();
+});
 
 // Homepage
 router.get("/", (req, res) => {
@@ -129,6 +148,7 @@ router.get("/users/:userId/orders", (req, res) => {
   });
 });
 
+
 // Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t   NY ANN
 router.delete("/cart/:userId", (req, res) => {
   const { userId } = req.params;
@@ -143,3 +163,35 @@ router.delete("/cart/:userId", (req, res) => {
 
 
 export default router;
+
+//Login
+router.post('/login', (req, res) => {
+  //hämtar användarnamn och lösenord från bodyn
+  const { username, password } = req.body;
+  //validerar användaren
+  validateUser(username, password, (err, user) => {
+  //kollar om funktionen returnerat user vilket den gör om användaren och lösenordet hittas, 
+  //om inte får man ett felmeddelande
+    if (!user) {
+      res.status(401).send('Username or password was incorrect')
+      return
+    } 
+    req.session.isOnline = true;
+    res.send(`User was successfully logged in. Login status is: ${req.session.isOnline}`)
+    
+  })
+})
+
+// Check login status
+router.get('/status', (req, res) => {
+  res.send(`Login status is: ${req.session.isOnline}`);
+})
+
+// Logout
+router.post('/logout', requireLogin, (req, res) => {
+    req.session.isOnline = false;
+    res.send(`User was successfully logged out. Login status is: ${req.session.isOnline}`);
+})
+
+export default router;
+
