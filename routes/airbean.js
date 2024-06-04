@@ -104,17 +104,12 @@ router.get("/cart", async (req, res) => {
     //skickar cart till användaren
     res.send(cartItems);
     return cartItems
-
+    
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
-  //Försökte mig på en lösning för att räkna ut totalpriset, men det ville sig inte.
-  const totalPrice = cartItems.reduce((total, item) => total + item.price, 0);
-    
-    res.send({cartItems, totalPrice});
-    return cartItems, totalPrice;
-});
+  });
 
 // Skapar användaren och returnerar användar-ID
 router.post("/register", validateUserCreation, (req, res) => {
