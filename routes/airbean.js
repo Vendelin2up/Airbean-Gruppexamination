@@ -148,6 +148,22 @@ router.get("/users/:userId/orders", (req, res) => {
   });
 });
 
+
+// Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t   NY ANN
+router.delete("/cart/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  cart.remove({ userId: userId }, { multi: true }, (err, numRemoved) => {
+    if (err) {
+      return res.status(500).json({ error: "Failed to clear cart" });
+    }
+    res.json({ message: "User's cart cleared successfully", numRemoved });
+  });
+});
+
+
+export default router;
+
 //Login
 router.post('/login', (req, res) => {
   //hämtar användarnamn och lösenord från bodyn
@@ -178,3 +194,4 @@ router.post('/logout', requireLogin, (req, res) => {
 })
 
 export default router;
+
