@@ -116,3 +116,7 @@ a {
   .order span {
     font-weight: bold;
   }
+  .total {
+    font-weight: bold;
+    font-size: 30px;
+  }
