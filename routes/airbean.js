@@ -162,7 +162,7 @@ router.delete("/cart/:userId", (req, res) => {
 });
 
 
-export default router;
+
 
 //Login
 router.post('/login', (req, res) => {
