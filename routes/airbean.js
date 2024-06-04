@@ -117,14 +117,13 @@ router.post("/register", validateUserCreation, (req, res) => {
     // Skapar användaren
     if (err) {
       // Om det uppstår ett fel
-      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande, false
+      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande: false
     }
-    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår, true
+    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår: true
   });
 });
-//Middleware-funktionen validateUserCreation används för att validera inkommande data innan användaren skapas.
-//Om användaren skapas framgångsrikt, returnerar den ett svar med användar-ID
-//Annars returnerar den ett felmeddelande.
+
+//Om användaren skapas framgångsrikt, returneras ett svar med användar-ID. Annars returneras ett felmeddelande.
 
 //Hämtar användaren med det specificerade användar-ID:t
 router.get("/users/:userId", (req, res) => {
