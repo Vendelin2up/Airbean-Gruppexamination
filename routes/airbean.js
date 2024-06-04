@@ -88,6 +88,7 @@ router.post("/menu", async (req, res) => {
   }
 });
 
+
 // Cart/Varukorg - användaren får en överblick över vad som beställts
 router.get("/cart", async (req, res) => {
   try {
@@ -108,6 +109,11 @@ router.get("/cart", async (req, res) => {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
+  //Försökte mig på en lösning för att räkna ut totalpriset, men det ville sig inte.
+  const totalPrice = cartItems.reduce((total, item) => total + item.price, 0);
+    
+    res.send({cartItems, totalPrice});
+    return cartItems, totalPrice;
 });
 
 // Skapar användaren och returnerar användar-ID
