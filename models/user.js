@@ -22,5 +22,8 @@ const getUserById = (userId, callback) => {
   createUser,
   getUserById
 };*/
+const validateUser = (username, password, callback) => {
+  userDb.findOne({ username: username, password: password }, callback);
+};
 
-export { createUser, getUserById };
+export { createUser, getUserById, validateUser };
