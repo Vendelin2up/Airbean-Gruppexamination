@@ -13,6 +13,7 @@ import requireLogin from "../middlewares/requireLogin.js"; //Login middleware f�
 
 const router = Router();
 const cart = new nedb({ filename: "models/cart.db", autoload: true });
+const orders = new nedb({ filename: "models/orders.db", autoload: true });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -69,18 +70,29 @@ router.get("/menu", validateMenu, (req, res) => {
 router.post("/menu", async (req, res) => {
   try {
     const orderId = req.body.id;
-    console.log(orderId);
     const selectedProduct = menu.find((product) => product.id === orderId);
-
+    const productTitle = selectedProduct.title;
+    const productPrice = selectedProduct.price;
+    //kontroll om varan finns i menyn
     if (!selectedProduct) {
       res.status(404).send("The requested product could not be found");
     }
-
-    await cart.insert(selectedProduct);
-    const productTitle = selectedProduct.title;
-    const productPrice = selectedProduct.price;
+    //kollar om man är inloggad, om så sparas den till orders.db med användarId
+    if (req.session.isOnline) { 
+     await orders.insert(
+        {
+          userId: req.session.currentUser, //sparar användarId
+          productId: selectedProduct.id, 
+          title: selectedProduct.title, 
+          price: selectedProduct.price,
+          date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
+        });
+    } 
+    //oavsett om man är inloggad eller inte sparas varan till cart.db
+    await cart.insert(selectedProduct) 
+    //svaret som skickas till användaren
     res.send(
-      `${productTitle} costing ${productPrice} kr was successfully added to cart`
+      `${productTitle} (${productPrice} kr) was successfully added to cart`
     );
   } catch (error) {
     console.log(error);
@@ -109,6 +121,33 @@ router.get("/cart", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+//Orders - användaren kan se tidigare orderhistorik om inloggad
+router.get('/orders', requireLogin, async(req, res) => {
+
+try {
+    const currentUserOrders = await orders.find({userId: req.session.currentUser}, (err, docs) => {})
+    let orderHistory = 'Previous orders:\n'
+    // kontroll om order.db är tom, i så fall får man ett felmeddelande
+    if(currentUserOrders.length === 0) {
+      return res.send('No orders found')
+    }
+
+    currentUserOrders.forEach((order) => {
+      const productName = order.title
+      const orderDate = order.date
+      const orderPrice = order.price
+      orderHistory += `<li>${orderDate}: ${productName}, ${orderPrice} kr</li>`
+    })
+  
+  res.send(orderHistory)
+}
+catch (error) {
+  console.error('Error fetching orders:', error);
+  res.status(500).send('Internal server error');
+}
+
+})
 
 // Skapar användaren och returnerar användar-ID
 router.post("/register", validateUserCreation, (req, res) => {
@@ -176,7 +215,9 @@ router.post('/login', (req, res) => {
       res.status(401).send('Username or password was incorrect')
       return
     } 
-    req.session.isOnline = true;
+    
+    req.session.currentUser = user.userId //sparar den aktuella användarens id så det går att nås från alla funktioner
+    req.session.isOnline = true; //ändrar variabeln till true
     res.send(`User was successfully logged in. Login status is: ${req.session.isOnline}`)
     
   })
