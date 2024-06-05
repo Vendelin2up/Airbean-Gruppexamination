@@ -105,10 +105,12 @@ router.post("/menu", validatePrice, async (req, res) => {
 
 router.get("/cart", async (req, res) => {
   try {
-    //hämtar det som finns i cart.db
-    const cartItems = await cart.find((err, docs) => {
-      return docs;
-    });
+    const cartItems = await cart.find(
+      //hämtar det som finns i cart som är har användarid på den som är inloggad eller 'guest' om man inte är inloggad
+      { userId: req.session.currentUser || 'guest'},
+      (err, docs) => {}
+    );
+
     let cartSummary = "Cart:\n";
     const itemPrice = cartItems.map((item) => item.price);
     const sum = itemPrice.reduce((partialSum, a) => partialSum + a, 0);
@@ -139,25 +141,23 @@ router.get("/cart", async (req, res) => {
   }
 });
 
-// Bekräftelsesida med hur långt det är kvar tills ordern kommer
-// DEN HÄR HAR VI NOG REDAN KANSKE, JÄMFÖR!!!
 // Place an order and store in order history
-router.post("/account/orders", requireLogin, async (req, res) => {
+router.post("/account/orders", async (req, res) => {
   try {
     const currentUserCart = await cart.find({
-      userId: req.session.currentUser,
+      userId: req.session.currentUser || 'guest',
     });
 
     // Check if the cart is empty
     if (currentUserCart.length === 0) {
       return res.status(404).send("Cart is empty");
     }
-
+   
     const estimatedDeliveryTime = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
 
     // Create an order
     const order = {
-      userId: req.session.currentUser,
+      userId: req.session.currentUser || 'guest',
       items: currentUserCart,
       estimatedDeliveryTime,
     };
@@ -166,19 +166,49 @@ router.post("/account/orders", requireLogin, async (req, res) => {
     await orders.insert(order);
 
     // Clear the cart for the current user
-    await cart.remove({ userId: req.session.currentUser }, { multi: true });
+    await cart.remove({ userId: req.session.currentUser || 'guest'}, { multi: true });
 
+    const currentOrder = await orders.find(
+      //hämtar det som finns i orders.db som är har användarid på den som är inloggad eller 'guest' om man inte är inloggad
+      { userId: req.session.currentUser || 'guest'},
+      (err, docs) => {}
+    );
+    const orderId = currentOrder.map((order) => order._id);
+    const orderItems = currentOrder.map((order) => order.items);
+    const result = orderItems.flat().map(item => {
+      return {
+        title: item.title,
+        price: item.price,
+        date: item.date
+      };
+    });
     // Send the order details and estimated delivery time to the client
-    res.json({ message: "Order placed successfully", order });
+    // let orderSummary = 'Order placed successfully:\n'
+    const formattedResult = result.map(item => 
+      `${item.date}: ${item.title} (${item.price}kr)<br>`
+    ).join('\n');
+
+    res.send(`Order placed successfully:<br><ul>${formattedResult}</ul><br><h5>Orderid: ${orderId} </h5>`);
+    // 
+    // res.json({ message: "Order placed successfully", order });
+     
+    // orderItems.forEach((cartItem) => {
+    //   const productName = cartItem.title;
+    //   const cartDate = cartItem.date;
+    //   const cartPrice = cartItem.price;
+      
+    //   orderSummary += `<li>${cartDate}: ${productName}, ${cartPrice} kr</li>`;
+    // })
+
+    // res.json(orderId + orderItems)
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
 });
 
-//Order Confirmation Endpoint
-//Add this new endpoint to fetch and return the order details with the estimated delivery time:
-router.get("/order/:orderId", requireLogin, async (req, res) => {
+// Bekräftelsesida med hur långt det är kvar tills ordern kommer
+router.get("/order/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
     const order = await orders.findOne({ _id: orderId });
@@ -203,7 +233,7 @@ router.get("/order/:orderId", requireLogin, async (req, res) => {
 
 // Helper function to delete an item from the cart
 async function deleteItem(id) {
-  return cart.remove({ id: parseInt(id, 10) }, {});
+  return cart.remove({ productId: parseInt(id, 10)}, {}); //ändrade från id till productId
 }
 
 // Delete item from cart endpoint
@@ -224,26 +254,32 @@ router.delete("/cart/:id", async (req, res) => {
 });
 
 //Orders - användaren kan se tidigare orderhistorik om inloggad
-router.get("/orders", requireLogin, async (req, res) => {
+router.get("/account/orders", requireLogin, async (req, res) => {
   try {
-    const currentUserOrders = await orders.find(
-      { userId: req.session.currentUser },
-      (err, docs) => {}
-    );
-    let orderHistory = "Previous orders:\n";
-    // kontroll om order.db är tom, i så fall får man ett felmeddelande
-    if (currentUserOrders.length === 0) {
-      return res.send("No orders found");
+    const currentUserOrders = await orders.find({ userId: req.session.currentUser });
+
+    if (!currentUserOrders) {
+      return res.status(404).send("Orders not found");
     }
 
-    currentUserOrders.forEach((order) => {
+    const orderItems = currentUserOrders.map((order) => order.items).flatMap(items => items.map(item => ({
+      date: item.date,
+      title: item.title,
+      price: item.price,
+    })))
+
+    let orderHistory = "Previous orders:\n";
+    const orderIds = currentUserOrders.map(order => order._id).join("<br>")
+
+    orderItems.forEach((order) => {
       const productName = order.title;
       const orderDate = order.date;
       const orderPrice = order.price;
-      orderHistory += `<li>${orderDate}: ${productName}, ${orderPrice} kr</li>`;
+      orderHistory += `<li>${orderDate}: ${productName} (${orderPrice} kr)</li>`;
     });
 
-    res.send(orderHistory);
+    res.send(`${orderHistory} <br>Order id's:<br>${orderIds}`);
+
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).send("Internal server error");
@@ -276,16 +312,17 @@ router.get("/users/:userId", (req, res) => {
   });
 });
 
+// Denna funktion fanns redan så kommenterade bort den
 // Get user's orders by user ID
-router.get("/users/:userId/orders", (req, res) => {
-  const { userId } = req.params;
-  getUserById(userId, (err, user) => {
-    if (err || !user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json({ orders: user.orders });
-  });
-});
+// router.get("/users/:userId/orders", (req, res) => {
+//   const { userId } = req.params;
+//   getUserById(userId, (err, user) => {
+//     if (err || !user) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+//     res.json({ orders: user.orders });
+//   });
+// });
 
 // Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t
 
