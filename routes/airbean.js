@@ -55,8 +55,17 @@ router.get("/about", (req, res) => {
     coffeeProduction:
       "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
   };
-  res.json(aboutInfo);
+  res.send(`
+    <p><strong>Company:</strong> ${aboutInfo.company}</p>
+    <p>${aboutInfo.description}</p>
+    <p><strong>Coffee Production:</strong></p>
+    <p>${aboutInfo.coffeeProduction}</p>
+    `);
 });
+
+
+
+
 
 // Menu
 router.get("/menu", validateMenu, (req, res) => {
@@ -65,7 +74,20 @@ router.get("/menu", validateMenu, (req, res) => {
     price: item.price,
     id: item.id,
   }));
-  res.json(coffeeMenu);
+  
+  const items = coffeeMenu.map(item => `
+  <div style="margin-bottom: 20px;">
+    <p style="margin: 0;">ID: ${item.id}</p>
+    <p style="margin: 0;">Kaffe: ${item.title}</p>
+    <p style="margin: 0;">Pris: ${item.price} kr</p>
+  </div>
+`).join('<br>');
+
+res.send(`
+  <div>
+    ${items}
+  </div>
+    `);
 });
 
 // Menu - order
