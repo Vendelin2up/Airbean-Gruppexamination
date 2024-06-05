@@ -149,7 +149,7 @@ router.get("/users/:userId/orders", (req, res) => {
 });
 
 
-// Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t   NY ANN
+// Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t 
 router.delete("/cart/:userId", (req, res) => {
   const { userId } = req.params;
 
@@ -177,6 +177,7 @@ router.post('/login', (req, res) => {
       return
     } 
     req.session.isOnline = true;
+    req.session.userId = user.userId; // Spara användarens ID i sessionen Nytt Ann
     res.send(`User was successfully logged in. Login status is: ${req.session.isOnline}`)
     
   })
@@ -187,11 +188,32 @@ router.get('/status', (req, res) => {
   res.send(`Login status is: ${req.session.isOnline}`);
 })
 
-// Logout
-router.post('/logout', requireLogin, (req, res) => {
+
+// Logout och specifik användares varukorg rensas
+router.post('/logout', requireLogin, async (req, res) => {
+  try {
+    const userId = req.session.userId; 
+    if (!userId) {
+      return res.status(400).send("User ID is missing from session");
+    }
+
+    const numRemoved = await cart.remove({ userId: userId }, { multi: true });
+     // Rensa användarens varukorg
+    
+  
     req.session.isOnline = false;
-    res.send(`User was successfully logged out. Login status is: ${req.session.isOnline}`);
-})
+    req.session.userId = null; 
+      // Logga ut användaren
+
+    res.send(`User was successfully logged out and cart cleared. Login status is: ${req.session.isOnline}, Items removed from cart: ${numRemoved}`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Failed to log out and clear cart");
+  }
+});
+
+
+
 
 export default router;
 
