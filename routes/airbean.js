@@ -115,9 +115,6 @@ router.get("/cart", async (req, res) => {
     
     //kontroll om cart är tom, i så fall får man ett felmeddelande
 
-    const cartItems = await cart.find({});
-
-
     if (cartItems.length === 0) {
       return res.status(404).send("Cart is empty");
     }
@@ -146,7 +143,10 @@ router.post('/account/orders', requireLogin, async(req, res) => {
     orders.insert(currentUserCart)
     res.send(currentUserCart);
     return currentUserCart
-
+  } catch (error) {
+    console.log(error);
+  }
+})
 
 // Helper function to delete an item from the cart
 async function deleteItem(id) {
