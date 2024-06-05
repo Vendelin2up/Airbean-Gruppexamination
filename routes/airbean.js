@@ -133,11 +133,16 @@ router.post("/register", validateUserCreation, (req, res) => {
   const { username, password } = req.body;
   createUser(username, password, (err, user) => {
     if (err) {
-      return res.status(500).json({ error: "Failed to create user" });
+
+      // Om det uppstår ett fel
+      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande: false
     }
-    res.status(201).json({ userId: user.userId });
+    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår: true
   });
 });
+
+//Om användaren skapas framgångsrikt, returneras ett svar med användar-ID. Annars returneras ett felmeddelande.
+
 
 // Get user by ID
 router.get("/users/:userId", (req, res) => {
