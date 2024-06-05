@@ -112,14 +112,29 @@ router.get("/cart", async (req, res) => {
     const cartItems = await cart.find( (err, docs) => { 
       return docs
     })
-    
-    //kontroll om cart är tom, i så fall får man ett felmeddelande
+    let cartSummary = 'Cart:\n'
+    const itemPrice = cartItems.map((item) => item.price)
+    const sum = itemPrice.reduce((partialSum, a) => partialSum + a, 0)
+     // kontroll om order.db är tom, i så fall får man ett felmeddelande
+    if(cartItems.length === 0) {
+      return res.send('No orders found')
+    }
 
+    cartItems.forEach((cartItem) => {
+      const productName = cartItem.title
+      const cartDate = cartItem.date
+      const cartPrice = cartItem.price
+     
+      cartSummary += `<li>${cartDate}: ${productName}, ${cartPrice} kr</li>`
+    })
+  
+  res.send(cartSummary + `<p>Total: ${sum}kr</p>`)
+
+
+    //kontroll om cart är tom, i så fall får man ett felmeddelande
     if (cartItems.length === 0) {
       return res.status(404).send("Cart is empty");
     }
-
-    res.send(cartItems);
 
     return cartItems
     
@@ -130,23 +145,61 @@ router.get("/cart", async (req, res) => {
 });
 
 
-// Cart/Varukorg - om man är klar i Cart kan man posta till orderhistory 
-router.post('/account/orders', requireLogin, async(req, res) => {
+// Bekräftelsesida med hur långt det är kvar tills ordern kommer
+// DEN HÄR HAR VI NOG REDAN KANSKE, JÄMFÖR!!!
+// Place an order and store in order history
+router.post('/account/orders', requireLogin, async (req, res) => {
   try {
-    const currentUserCart = await cart.find({userId: req.session.currentUser}, (err, docs) => {})
-    
-    //kontroll om cart är tom, i så fall får man ett felmeddelande
+    const currentUserCart = await cart.find({ userId: req.session.currentUser });
+
+    // Check if the cart is empty
     if (currentUserCart.length === 0) {
-      res.status(404).send("Cart is empty");
+      return res.status(404).send("Cart is empty");
     }
-    //skickar det som finns i cart till orders (orderhistoriken)
-    orders.insert(currentUserCart)
-    res.send(currentUserCart);
-    return currentUserCart
+
+    const estimatedDeliveryTime = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+
+    // Create an order
+    const order = {
+      userId: req.session.currentUser,
+      items: currentUserCart,
+      estimatedDeliveryTime,
+    };
+
+    // Insert the order into the orders database
+    await orders.insert(order);
+
+    // Clear the cart for the current user
+    await cart.remove({ userId: req.session.currentUser }, { multi: true });
+
+    // Send the order details and estimated delivery time to the client
+    res.json({ message: "Order placed successfully", order });
   } catch (error) {
     console.log(error);
+    res.status(500).send("Internal Server Error");
   }
-})
+});
+
+//Order Confirmation Endpoint
+//Add this new endpoint to fetch and return the order details with the estimated delivery time:
+router.get('/order/:orderId', requireLogin, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await orders.findOne({ _id: orderId });
+
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+
+    const items = order.items.map(item => `<li>${item.title} (${item.price} kr)</li>`).join('');
+    const estimatedDeliveryTime = order.estimatedDeliveryTime;
+    
+    res.send(`<p>Order confirmation</p><ul>${items}</ul><p>Estimated delivery time: ${estimatedDeliveryTime}</p>`);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 // Helper function to delete an item from the cart
 async function deleteItem(id) {
