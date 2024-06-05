@@ -3,34 +3,39 @@ import nedb from "nedb-promise";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import bodyParser from "body-parser";
-import session from "express-session"; // för att hantera användarsessioner - login status
+import session from "express-session"; // for handling user sessions - login status
 
 import menu from "../models/coffeeMenu.js";
 import { createUser, getUserById, validateUser } from "../models/user.js";
-import { validateUserCreation } from "../middlewares/validation.js";
-import { validateMenu, validateAboutData } from "../middlewares/validation.js";
-import requireLogin from "../middlewares/requireLogin.js"; //Login middleware för att kolla status, återanvänd vid behov
+import {
+  validateUserCreation,
+  validateMenu,
+  validateAboutData,
+} from "../middlewares/validation.js";
+import requireLogin from "../middlewares/requireLogin.js"; // Login middleware to check status, reuse as needed
 
 const router = Router();
 const cart = new nedb({ filename: "models/cart.db", autoload: true });
+const orders = new nedb({ filename: "models/orders.db", autoload: true });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
 
-// Session configuration - behövs för login funktionen
-router.use(session({
-  secret: 'this is the key', 
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false } // Set to true if using HTTPS
-}));
-
+// Session configuration - needed for login functionality
+router.use(
+  session({
+    secret: "this is the key",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // Set to true if using HTTPS
+  })
+);
 
 // Middleware to make session variables accessible
 router.use((req, res, next) => {
-  if (typeof req.session.isOnline === 'undefined') {
+  if (typeof req.session.isOnline === "undefined") {
     req.session.isOnline = false;
   }
   next();
@@ -42,7 +47,7 @@ router.get("/", (req, res) => {
 });
 
 // About
-router.get("/about", (req, res) => {  // Jag tog bort "validateAboutData" från raden här för att det inte behövdes. I en GET-förfrågan behöver man inte validera någon BODY data eftersom det inte finns någon.
+router.get("/about", (req, res) => {
   const aboutInfo = {
     company: "Airbean Coffee",
     description:
@@ -55,13 +60,11 @@ router.get("/about", (req, res) => {  // Jag tog bort "validateAboutData" från 
 
 // Menu
 router.get("/menu", validateMenu, (req, res) => {
-  const coffeeMenu = menu.map((item) => {
-    return {
-      title: item.title,
-      price: item.price,
-      id: item.id,
-    };
-  });
+  const coffeeMenu = menu.map((item) => ({
+    title: item.title,
+    price: item.price,
+    id: item.id,
+  }));
   res.json(coffeeMenu);
 });
 
@@ -69,18 +72,29 @@ router.get("/menu", validateMenu, (req, res) => {
 router.post("/menu", async (req, res) => {
   try {
     const orderId = req.body.id;
-    console.log(orderId);
     const selectedProduct = menu.find((product) => product.id === orderId);
-
-    if (!selectedProduct) {
-      res.status(404).send("The requested product could not be found");
-    }
-
-    await cart.insert(selectedProduct);
     const productTitle = selectedProduct.title;
     const productPrice = selectedProduct.price;
+    //kontroll om varan finns i menyn
+    if (!selectedProduct) {
+      return res.status(404).send("The requested product could not be found");
+    }
+    
+      await cart.insert(
+         {
+           userId: req.session.currentUser || 'guest', //sparar användarId
+           productId: selectedProduct.id, 
+           title: selectedProduct.title, 
+           price: selectedProduct.price,
+           date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
+         });
+     
+
+    //oavsett om man är inloggad eller inte sparas varan till cart.db
+    // await cart.insert(selectedProduct) 
+    //svaret som skickas till användaren
     res.send(
-      `${productTitle} costing ${productPrice} kr was successfully added to cart`
+      `${productTitle} (${productPrice} kr) was successfully added to cart`
     );
   } catch (error) {
     console.log(error);
@@ -88,45 +102,173 @@ router.post("/menu", async (req, res) => {
   }
 });
 
+
 // Cart/Varukorg - användaren får en överblick över vad som beställts
+
 router.get("/cart", async (req, res) => {
   try {
-    //hämta cart och visa för användaren
+
+    //hämtar det som finns i cart.db
     const cartItems = await cart.find( (err, docs) => { 
       return docs
     })
-    
+    let cartSummary = 'Cart:\n'
+    const itemPrice = cartItems.map((item) => item.price)
+    const sum = itemPrice.reduce((partialSum, a) => partialSum + a, 0)
+     // kontroll om order.db är tom, i så fall får man ett felmeddelande
+    if(cartItems.length === 0) {
+      return res.send('No orders found')
+    }
+
+    cartItems.forEach((cartItem) => {
+      const productName = cartItem.title
+      const cartDate = cartItem.date
+      const cartPrice = cartItem.price
+     
+      cartSummary += `<li>${cartDate}: ${productName}, ${cartPrice} kr</li>`
+    })
+  
+  res.send(cartSummary + `<p>Total: ${sum}kr</p>`)
+
+
     //kontroll om cart är tom, i så fall får man ett felmeddelande
     if (cartItems.length === 0) {
-      res.status(404).send("Cart is empty");
+      return res.status(404).send("Cart is empty");
     }
-    //skickar cart till användaren
-    res.send(cartItems);
-    return cartItems
 
+    return cartItems
+    
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
 });
 
+
+// Bekräftelsesida med hur långt det är kvar tills ordern kommer
+// DEN HÄR HAR VI NOG REDAN KANSKE, JÄMFÖR!!!
+// Place an order and store in order history
+router.post('/account/orders', requireLogin, async (req, res) => {
+  try {
+    const currentUserCart = await cart.find({ userId: req.session.currentUser });
+
+    // Check if the cart is empty
+    if (currentUserCart.length === 0) {
+      return res.status(404).send("Cart is empty");
+    }
+
+    const estimatedDeliveryTime = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+
+    // Create an order
+    const order = {
+      userId: req.session.currentUser,
+      items: currentUserCart,
+      estimatedDeliveryTime,
+    };
+
+    // Insert the order into the orders database
+    await orders.insert(order);
+
+    // Clear the cart for the current user
+    await cart.remove({ userId: req.session.currentUser }, { multi: true });
+
+    // Send the order details and estimated delivery time to the client
+    res.json({ message: "Order placed successfully", order });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+//Order Confirmation Endpoint
+//Add this new endpoint to fetch and return the order details with the estimated delivery time:
+router.get('/order/:orderId', requireLogin, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await orders.findOne({ _id: orderId });
+
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+
+    const items = order.items.map(item => `<li>${item.title} (${item.price} kr)</li>`).join('');
+    const estimatedDeliveryTime = order.estimatedDeliveryTime;
+    
+    res.send(`<p>Order confirmation</p><ul>${items}</ul><p>Estimated delivery time: ${estimatedDeliveryTime}</p>`);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// Helper function to delete an item from the cart
+async function deleteItem(id) {
+  return cart.remove({ id: parseInt(id, 10) }, {});
+}
+
+// Delete item from cart endpoint
+router.delete("/cart/:id", async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    const numRemoved = await deleteItem(itemId);
+
+    if (numRemoved === 0) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    res.json({ message: "Deleted coffee" });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+
+})
+
+//Orders - användaren kan se tidigare orderhistorik om inloggad
+router.get('/orders', requireLogin, async(req, res) => {
+try {
+    const currentUserOrders = await orders.find({userId: req.session.currentUser}, (err, docs) => {})
+    let orderHistory = 'Previous orders:\n'
+    // kontroll om order.db är tom, i så fall får man ett felmeddelande
+    if(currentUserOrders.length === 0) {
+      return res.send('No orders found')
+    }
+
+    currentUserOrders.forEach((order) => {
+      const productName = order.title
+      const orderDate = order.date
+      const orderPrice = order.price
+      orderHistory += `<li>${orderDate}: ${productName}, ${orderPrice} kr</li>`
+    })
+  
+  res.send(orderHistory)
+}
+catch (error) {
+  console.error('Error fetching orders:', error);
+  res.status(500).send('Internal server error');
+}
+
+})
+
 // Skapar användaren och returnerar användar-ID
+
 router.post("/register", validateUserCreation, (req, res) => {
   const { username, password } = req.body;
   createUser(username, password, (err, user) => {
-    // Skapar användaren
     if (err) {
+
       // Om det uppstår ett fel
-      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande, false
+      return res.status(500).json({ error: "Failed to create user" }); // Skicka ett felmeddelande: false
     }
-    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår, true
+    res.status(201).json({ userId: user.userId }); // Skicka användar-ID om inget fel uppstår: true
   });
 });
-//Middleware-funktionen validateUserCreation används för att validera inkommande data innan användaren skapas.
-//Om användaren skapas framgångsrikt, returnerar den ett svar med användar-ID
-//Annars returnerar den ett felmeddelande.
 
-//Hämtar användaren med det specificerade användar-ID:t
+//Om användaren skapas framgångsrikt, returneras ett svar med användar-ID. Annars returneras ett felmeddelande.
+
+
+// Get user by ID
 router.get("/users/:userId", (req, res) => {
   const { userId } = req.params;
   getUserById(userId, (err, user) => {
@@ -137,7 +279,7 @@ router.get("/users/:userId", (req, res) => {
   });
 });
 
-// // Hämtar användarens beställningar baserat på det specificerade användar-ID:t
+// Get user's orders by user ID
 router.get("/users/:userId/orders", (req, res) => {
   const { userId } = req.params;
   getUserById(userId, (err, user) => {
@@ -149,7 +291,11 @@ router.get("/users/:userId/orders", (req, res) => {
 });
 
 
+
 // Rensa användarens kundvagn baserat på det specifikicerade användar-ID:t 
+
+
+
 router.delete("/cart/:userId", (req, res) => {
   const { userId } = req.params;
 
@@ -161,32 +307,33 @@ router.delete("/cart/:userId", (req, res) => {
   });
 });
 
-
-
-
-//Login
-router.post('/login', (req, res) => {
-  //hämtar användarnamn och lösenord från bodyn
+// Login
+router.post("/login", (req, res) => {
   const { username, password } = req.body;
-  //validerar användaren
   validateUser(username, password, (err, user) => {
-  //kollar om funktionen returnerat user vilket den gör om användaren och lösenordet hittas, 
-  //om inte får man ett felmeddelande
     if (!user) {
       res.status(401).send('Username or password was incorrect')
       return
     } 
-    req.session.isOnline = true;
-    req.session.userId = user.userId; // Spara användarens ID i sessionen Nytt Ann
+
+   
+    req.session.userId = user.userId; // Spara användarens ID i sessionen 
+
+    
+    req.session.currentUser = user.userId //sparar den aktuella användarens id så det går att nås från alla funktioner
+    req.session.isOnline = true; //ändrar variabeln till true
+
     res.send(`User was successfully logged in. Login status is: ${req.session.isOnline}`)
     
   })
 })
 
+
 // Check login status
-router.get('/status', (req, res) => {
+router.get("/status", (req, res) => {
   res.send(`Login status is: ${req.session.isOnline}`);
-})
+});
+
 
 
 // Logout och specifik användares varukorg rensas
@@ -215,5 +362,5 @@ router.post('/logout', requireLogin, async (req, res) => {
 
 
 
-export default router;
 
+export default router;
