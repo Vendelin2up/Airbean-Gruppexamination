@@ -16,6 +16,7 @@ import requireLogin from "../middlewares/requireLogin.js"; // Login middleware t
 
 const router = Router();
 const cart = new nedb({ filename: "models/cart.db", autoload: true });
+const orders = new nedb({ filename: "models/orders.db", autoload: true });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -71,18 +72,29 @@ router.get("/menu", validateMenu, (req, res) => {
 router.post("/menu", async (req, res) => {
   try {
     const orderId = req.body.id;
-    console.log(orderId);
     const selectedProduct = menu.find((product) => product.id === orderId);
-
+    const productTitle = selectedProduct.title;
+    const productPrice = selectedProduct.price;
+    //kontroll om varan finns i menyn
     if (!selectedProduct) {
       return res.status(404).send("The requested product could not be found");
     }
+    
+      await cart.insert(
+         {
+           userId: req.session.currentUser || 'guest', //sparar användarId
+           productId: selectedProduct.id, 
+           title: selectedProduct.title, 
+           price: selectedProduct.price,
+           date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
+         });
+     
 
-    await cart.insert(selectedProduct);
-    const productTitle = selectedProduct.title;
-    const productPrice = selectedProduct.price;
+    //oavsett om man är inloggad eller inte sparas varan till cart.db
+    // await cart.insert(selectedProduct) 
+    //svaret som skickas till användaren
     res.send(
-      `${productTitle} costing ${productPrice} kr was successfully added to cart`
+      `${productTitle} (${productPrice} kr) was successfully added to cart`
     );
   } catch (error) {
     console.log(error);
@@ -95,7 +107,16 @@ router.post("/menu", async (req, res) => {
 
 router.get("/cart", async (req, res) => {
   try {
+
+    //hämtar det som finns i cart.db
+    const cartItems = await cart.find( (err, docs) => { 
+      return docs
+    })
+    
+    //kontroll om cart är tom, i så fall får man ett felmeddelande
+
     const cartItems = await cart.find({});
+
 
     if (cartItems.length === 0) {
       return res.status(404).send("Cart is empty");
@@ -110,6 +131,22 @@ router.get("/cart", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+
+// Cart/Varukorg - om man är klar i Cart kan man posta till orderhistory 
+router.post('/account/orders', requireLogin, async(req, res) => {
+  try {
+    const currentUserCart = await cart.find({userId: req.session.currentUser}, (err, docs) => {})
+    
+    //kontroll om cart är tom, i så fall får man ett felmeddelande
+    if (currentUserCart.length === 0) {
+      res.status(404).send("Cart is empty");
+    }
+    //skickar det som finns i cart till orders (orderhistoriken)
+    orders.insert(currentUserCart)
+    res.send(currentUserCart);
+    return currentUserCart
+
 
 // Helper function to delete an item from the cart
 async function deleteItem(id) {
@@ -127,13 +164,42 @@ router.delete("/cart/:id", async (req, res) => {
     }
 
     res.json({ message: "Deleted coffee" });
+
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
-  });
 
-// Register user and return user ID
+})
+
+//Orders - användaren kan se tidigare orderhistorik om inloggad
+router.get('/orders', requireLogin, async(req, res) => {
+try {
+    const currentUserOrders = await orders.find({userId: req.session.currentUser}, (err, docs) => {})
+    let orderHistory = 'Previous orders:\n'
+    // kontroll om order.db är tom, i så fall får man ett felmeddelande
+    if(currentUserOrders.length === 0) {
+      return res.send('No orders found')
+    }
+
+    currentUserOrders.forEach((order) => {
+      const productName = order.title
+      const orderDate = order.date
+      const orderPrice = order.price
+      orderHistory += `<li>${orderDate}: ${productName}, ${orderPrice} kr</li>`
+    })
+  
+  res.send(orderHistory)
+}
+catch (error) {
+  console.error('Error fetching orders:', error);
+  res.status(500).send('Internal server error');
+}
+
+})
+
+// Skapar användaren och returnerar användar-ID
+
 router.post("/register", validateUserCreation, (req, res) => {
   const { username, password } = req.body;
   createUser(username, password, (err, user) => {
@@ -188,14 +254,17 @@ router.post("/login", (req, res) => {
   const { username, password } = req.body;
   validateUser(username, password, (err, user) => {
     if (!user) {
-      return res.status(401).send("Username or password was incorrect");
-    }
-    req.session.isOnline = true;
-    res.send(
-      `User was successfully logged in. Login status is: ${req.session.isOnline}`
-    );
-  });
-});
+      res.status(401).send('Username or password was incorrect')
+      return
+    } 
+    
+    req.session.currentUser = user.userId //sparar den aktuella användarens id så det går att nås från alla funktioner
+    req.session.isOnline = true; //ändrar variabeln till true
+    res.send(`User was successfully logged in. Login status is: ${req.session.isOnline}`)
+    
+  })
+})
+
 
 // Check login status
 router.get("/status", (req, res) => {
