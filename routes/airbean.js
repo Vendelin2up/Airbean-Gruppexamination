@@ -78,18 +78,30 @@ router.post("/menu", async (req, res) => {
       res.status(404).send("The requested product could not be found");
     }
     //kollar om man är inloggad, om så sparas den till orders.db med användarId
-    if (req.session.isOnline) { 
-     await orders.insert(
-        {
-          userId: req.session.currentUser, //sparar användarId
-          productId: selectedProduct.id, 
-          title: selectedProduct.title, 
-          price: selectedProduct.price,
-          date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
-        });
-    } 
+    // if (req.session.isOnline) { 
+    //  await orders.insert(
+    //     {
+    //       userId: req.session.currentUser, //sparar användarId
+    //       productId: selectedProduct.id, 
+    //       title: selectedProduct.title, 
+    //       price: selectedProduct.price,
+    //       date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
+    //     });
+    // } 
+
+    
+      await cart.insert(
+         {
+           userId: req.session.currentUser || 'guest', //sparar användarId
+           productId: selectedProduct.id, 
+           title: selectedProduct.title, 
+           price: selectedProduct.price,
+           date: new Date().toJSON().slice(0,10).replace(/-/g,'/') //sparar datum för beställning
+         });
+     
+
     //oavsett om man är inloggad eller inte sparas varan till cart.db
-    await cart.insert(selectedProduct) 
+    // await cart.insert(selectedProduct) 
     //svaret som skickas till användaren
     res.send(
       `${productTitle} (${productPrice} kr) was successfully added to cart`
@@ -103,7 +115,7 @@ router.post("/menu", async (req, res) => {
 // Cart/Varukorg - användaren får en överblick över vad som beställts
 router.get("/cart", async (req, res) => {
   try {
-    //hämta cart och visa för användaren
+    //hämtar det som finns i cart.db
     const cartItems = await cart.find( (err, docs) => { 
       return docs
     })
@@ -122,9 +134,28 @@ router.get("/cart", async (req, res) => {
   }
 });
 
+// Cart/Varukorg - om man är klar i Cart kan man posta till orderhistory 
+router.post('/account/orders', requireLogin, async(req, res) => {
+  try {
+    const currentUserCart = await cart.find({userId: req.session.currentUser}, (err, docs) => {})
+    
+    //kontroll om cart är tom, i så fall får man ett felmeddelande
+    if (currentUserCart.length === 0) {
+      res.status(404).send("Cart is empty");
+    }
+    //skickar det som finns i cart till orders (orderhistoriken)
+    orders.insert(currentUserCart)
+    res.send(currentUserCart);
+    return currentUserCart
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal Server Error");
+  }
+})
+
 //Orders - användaren kan se tidigare orderhistorik om inloggad
 router.get('/orders', requireLogin, async(req, res) => {
-
 try {
     const currentUserOrders = await orders.find({userId: req.session.currentUser}, (err, docs) => {})
     let orderHistory = 'Previous orders:\n'
