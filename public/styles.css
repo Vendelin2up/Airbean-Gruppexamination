@@ -65,6 +65,14 @@ a {
 #about {
     width: 70%;
 }
+#menu-container {
+    display: flex;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
+    margin: 20px;
+    width: 90%;
+
+}
 .menu-item {
     margin-bottom: 20px;
   }

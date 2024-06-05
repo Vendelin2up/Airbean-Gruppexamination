@@ -22,5 +22,49 @@
         <li><a href="about.html">About us</a></li>
         </ul>
     </nav>
+    <h1>Login</h1>
+    <form id="loginForm" action="/login" method="POST">
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = {
+                username: formData.get('username'),
+                password: formData.get('password')
+            };
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.text())
+            .then(message => {
+                if (message.includes('successfully logged in')) {
+                    document.getElementById('loginForm').style.display = 'none';
+                }
+                document.getElementById('message').textContent = message;
+            })
+            .catch(error => {
+                document.getElementById('message').textContent = 'Error logging in';
+                console.error('Error:', error);
+            });
+        });
+    </script>
 </body>
 </html>

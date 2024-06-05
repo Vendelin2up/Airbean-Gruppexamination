@@ -90,7 +90,9 @@ router.post("/menu", async (req, res) => {
   }
 });
 
-// Cart - overview
+
+// Cart/Varukorg - användaren får en överblick över vad som beställts
+
 router.get("/cart", async (req, res) => {
   try {
     const cartItems = await cart.find({});
@@ -100,6 +102,9 @@ router.get("/cart", async (req, res) => {
     }
 
     res.send(cartItems);
+
+    return cartItems
+    
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal Server Error");
@@ -126,7 +131,7 @@ router.delete("/cart/:id", async (req, res) => {
     console.log(error);
     res.status(500).send("Internal Server Error");
   }
-});
+  });
 
 // Register user and return user ID
 router.post("/register", validateUserCreation, (req, res) => {
