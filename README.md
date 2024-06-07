@@ -15,3 +15,6 @@
 | POST | /account/login     |   Logga in|
 | GET | /account/status     |    Se loginstatus |
 | POST | /account/logout     |    Logga ut + rensa vaukorg |
+
+## Gruppmedlemmar
+Ann Heijkenskjöld, Maya Arzapalo Björklund, Amanda Cyrus och Erik Karlsson
