@@ -1,5 +1,3 @@
-{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","productId":2,"title":"Caffè Doppio","price":49,"date":"2024/06/05","_id":"9gq66LpQTwDb31g0"}
-{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","productId":2,"title":"Caffè Doppio","price":49,"date":"2024/06/05","_id":"NwEgT3FTUoSPFbkk"}
-{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","productId":1,"title":"Bryggkaffe","price":39,"date":"2024/06/05","_id":"ZClo3k7Iz2bzC0AS"}
-{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","productId":4,"title":"Latte Macchiato","price":49,"date":"2024/06/05","_id":"cmucBTPCmV96SaAb"}
-{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","items":[{"userId":"202e9534-3f14-4660-8ffb-5e5996e9a2de","productId":1,"title":"Bryggkaffe","price":39,"date":"2024/06/05","_id":"U8YQulGN4dV1gtm1"}],"estimatedDeliveryTime":{"$$date":1717580544712},"_id":"frA9ojXYHxpAAOb0"}
+{"userId":"2860d67d-887f-4390-90ad-571a71965969","items":[{"userId":"2860d67d-887f-4390-90ad-571a71965969","productId":6,"title":"Cortado","price":39,"date":"2024/06/07","_id":"4euOKB3pNDob4S9p"}],"estimatedDeliveryTime":{"$$date":1717750124860},"_id":"BT3p0DnFZykGZ6aL"}
+{"userId":"2860d67d-887f-4390-90ad-571a71965969","items":[{"userId":"2860d67d-887f-4390-90ad-571a71965969","productId":1,"title":"Bryggkaffe","price":39,"date":"2024/06/07","_id":"3fu1m41EkOVThKqG"}],"estimatedDeliveryTime":{"$$date":1717750137318},"_id":"Ceqie590TWRFM4dc"}
+{"userId":"guest","items":[{"userId":"guest","productId":4,"title":"Latte Macchiato","price":49,"date":"2024/06/07","_id":"HC0igmnwwQj5WJfv"},{"userId":"guest","productId":6,"title":"Cortado","price":39,"date":"2024/06/07","_id":"J8TXWnGfmir37HaT"}],"estimatedDeliveryTime":{"$$date":1717749952158},"_id":"wXiF8U26ZXsfsTjP"}
