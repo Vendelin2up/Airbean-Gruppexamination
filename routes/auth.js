@@ -16,8 +16,7 @@ const router = express.Router()
 router.get("/orders", requireLogin, async (req, res) => {
     try {
       const currentUserOrders = await orders.find({ userId: req.session.currentUser });
-  
-      if (!currentUserOrders) { //måste justeras, just nu fattar den inte om den inte har någon order
+      if (currentUserOrders.length === 0) { 
         return res.status(404).send("Orders not found");
       }
 
